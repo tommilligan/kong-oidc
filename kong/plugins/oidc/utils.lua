@@ -73,6 +73,21 @@ function M.injectUser(user)
   ngx.ctx.authenticated_credential = tmp_user
   local userinfo = cjson.encode(user)
   ngx.req.set_header("X-Userinfo", ngx.encode_base64(userinfo))
+
+  -- also set Kong defined X-Credential headers
+  -- for compaibility with their oauth2-introspection plugin
+  -- https://docs.konghq.com/enterprise/0.33-x/plugins/oauth2-introspection/
+  ngx.req.set_header("X-Credential-Scope", user.scope)
+  ngx.req.set_header("X-Credential-Client-ID", user.client_id)
+  ngx.req.set_header("X-Credential-Username", user.username)
+  ngx.req.set_header("X-Credential-Token-Type", user.token_type)
+  ngx.req.set_header("X-Credential-Exp", user.exp)
+  ngx.req.set_header("X-Credential-Iat", user.iat)
+  ngx.req.set_header("X-Credential-Nbf", user.nbf)
+  ngx.req.set_header("X-Credential-Sub", user.sub)
+  ngx.req.set_header("X-Credential-Aud", user.aud)
+  ngx.req.set_header("X-Credential-Iss", user.iss)
+  ngx.req.set_header("X-Credential-Jti", user.jti)
 end
 
 function M.has_bearer_access_token()

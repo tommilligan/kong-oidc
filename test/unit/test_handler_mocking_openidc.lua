@@ -97,8 +97,20 @@ function TestHandler:test_introspect_ok_with_userinfo()
 end
 
 function TestHandler:test_bearer_only_with_good_token()
+  local user = {
+    active = true,
+    client_id = "l238j323ds-23ij4",
+    username = "jdoe",
+    scope = "read write dolphin",
+    sub = "Z5O3upPC88QrAjx00dis",
+    aud = "https://protected.example.net/resource",
+    iss = "https://server.example.com/",
+    exp = 1419356238,
+    iat = 1419350238,
+    extension_field = "twenty-seven"
+  }
   self.module_resty.openidc.introspect = function(opts)
-    return {sub = "sub"}, false
+    return user, false
   end
   ngx.req.get_headers = function() return {Authorization = "Bearer xxx"} end
 
@@ -114,6 +126,17 @@ function TestHandler:test_bearer_only_with_good_token()
   self.handler:access({introspection_endpoint = "x", bearer_only = "yes", realm = "kong"})
   lu.assertTrue(self:log_contains("introspect succeeded"))
   lu.assertEquals(headers['X-Userinfo'], "eyJzdWIiOiJzdWIifQ==")
+  lu.assertEquals(headers["X-Credential-Scope"], user.scope)
+  lu.assertEquals(headers["X-Credential-Client-ID"], user.client_id)
+  lu.assertEquals(headers["X-Credential-Username"], user.username)
+  lu.assertEquals(headers["X-Credential-Token-Type"], user.token_type)
+  lu.assertEquals(headers["X-Credential-Exp"], user.exp)
+  lu.assertEquals(headers["X-Credential-Iat"], user.iat)
+  lu.assertEquals(headers["X-Credential-Nbf"], user.nbf)
+  lu.assertEquals(headers["X-Credential-Sub"], user.sub)
+  lu.assertEquals(headers["X-Credential-Aud"], user.aud)
+  lu.assertEquals(headers["X-Credential-Iss"], user.iss)
+  lu.assertEquals(headers["X-Credential-Jti"], user.jti)
 end
 
 function TestHandler:test_bearer_only_with_bad_token()
