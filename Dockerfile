@@ -9,13 +9,13 @@ RUN apk add --no-cache \
     libressl-dev \
     build-base \
     lua
-# dev dependencies
+# test dependencies
 RUN luarocks install luaunit && \
-    luarocks install luacov && \
-    luarocks install lua-resty-openidc
+    luarocks install luacov
 
 # copy project files
 COPY ./ ./
+RUN luarocks make *.rockspec
 
 # run tests
 RUN chmod a+x ./ci/*
