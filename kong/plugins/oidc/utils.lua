@@ -46,6 +46,7 @@ function M.get_options(config, ngx)
     discovery = config.discovery,
     introspection_endpoint = config.introspection_endpoint,
     introspection_endpoint_auth_method = config.introspection_endpoint_auth_method,
+    subject_verify_subdomain = config.subject_verify_subdomain,
     bearer_only = config.bearer_only,
     realm = config.realm,
     redirect_uri_path = config.redirect_uri_path or M.get_redirect_uri_path(ngx),
@@ -66,13 +67,24 @@ function M.exit(httpStatusCode, message, ngxCode)
   ngx.exit(ngxCode)
 end
 
-function M.injectUser(user)
+function M.injectUser(user, subject_verify_subdomain)
   local tmp_user = user
   tmp_user.id = user.sub
   tmp_user.username = user.preferred_username
   ngx.ctx.authenticated_credential = tmp_user
   local userinfo = cjson.encode(user)
   ngx.req.set_header("X-Userinfo", ngx.encode_base64(userinfo))
+
+  -- verify subdomain from subject
+  -- against forwarded host headers
+  if subject_verify_subdomain == "yes" then
+    local host = ngx.req.get_headers()['Host']
+    local host_subdomain = string.match(host, "[^%.]+")
+    local subject = cjson.decode(ngx.decode_base64(user.sub))
+    if host_subdomain ~= subject.subdomain then
+      return M.exit(ngx.HTTP_UNAUTHORIZED, "Unauthorized", ngx.HTTP_UNAUTHORIZED)
+    end
+  end
 
   -- also set Kong defined X-Credential headers
   -- for compaibility with their oauth2-introspection plugin

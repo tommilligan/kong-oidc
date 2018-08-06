@@ -30,14 +30,14 @@ function handle(oidcConfig)
   if oidcConfig.introspection_endpoint then
     response = introspect(oidcConfig)
     if response then
-      utils.injectUser(response)
+      utils.injectUser(response, oidcConfig.subject_verify_subdomain)
     end
   end
 
   if response == nil then
     response = make_oidc(oidcConfig)
     if response and response.user then
-      utils.injectUser(response.user)
+      utils.injectUser(response.user, oidcConfig.subject_verify_subdomain)
     end
   end
 end
