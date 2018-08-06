@@ -14,8 +14,8 @@ end
 
 function TestIntrospect:test_access_token_exists()
   ngx.req.get_headers = function() return {Authorization = "Bearer xxx"} end
-  local dict = {}
-  function dict:get(key) return key end
+  local dict = {xxx = '{"sub": "sub"}'}
+  function dict:get(key) return dict[key] end
   _G.ngx.shared = {introspection = dict }
 
   ngx.encode_base64 = function(x)
