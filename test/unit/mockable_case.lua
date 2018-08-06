@@ -31,15 +31,8 @@ function MockableCase:setUp()
   self.resty = package.loaded.resty
   package.loaded["resty.http"] = nil
   package.preload["resty.http"] = function()
-    return {encode = function(...) return "encoded" end}
-  end
-
-  self.cjson = package.loaded.cjson
-  package.loaded.cjson = nil
-  package.preload["cjson"] = function()
     return {
-      encode = function(...) return "encoded" end,
-      decode = function(...) return {sub = "sub"} end
+      encode = function(...) return "encoded" end
     }
   end
 end
@@ -48,7 +41,6 @@ function MockableCase:tearDown()
   MockableCase.super:tearDown()
   _G.ngx = self.ngx
   package.loaded.resty = self.resty
-  package.loaded.cjson = self.cjson
 end
 
 function MockableCase:log_contains(str)
