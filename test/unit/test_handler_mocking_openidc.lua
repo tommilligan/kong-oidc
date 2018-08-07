@@ -139,6 +139,60 @@ function TestHandler:test_bearer_only_with_good_token()
   lu.assertEquals(headers["X-Credential-Jti"], user.jti)
 end
 
+function TestHandler:test_bearer_only_with_good_token_verify_subdomian_ok()
+  local user = {
+    active = true,
+    sub = "eyJlbWFpbCI6ImZvb0BiYXIuY29tIiwic3ViZG9tYWluIjoic3BhbSJ9",
+  }
+  self.module_resty.openidc.introspect = function(opts)
+    return user, false
+  end
+  ngx.req.get_headers = function() return {Authorization = "Bearer xxx", ["Host"] = "spam.test.com"} end
+
+  ngx.encode_base64 = function(x)
+    return "eyJzdWIiOiJzdWIifQ=="
+  end
+
+  ngx.decode_base64 = function(x)
+    return '{"email":"foo@bar.com","subdomain":"spam"}'
+  end
+
+  local headers = {}
+  ngx.req.set_header = function(h, v)
+    headers[h] = v
+  end
+
+  self.handler:access({introspection_endpoint = "x", bearer_only = "yes", realm = "kong", subject_verify_subdomain  = "yes"})
+  lu.assertEquals(headers["X-Credential-Sub"], user.sub)
+end
+
+function TestHandler:test_bearer_only_with_good_token_verify_subdomian_nok()
+  local user = {
+    active = true,
+    sub = "eyJlbWFpbCI6ImZvb0BiYXIuY29tIiwic3ViZG9tYWluIjoic3BhbSJ9",
+  }
+  self.module_resty.openidc.introspect = function(opts)
+    return user, false
+  end
+  ngx.req.get_headers = function() return {Authorization = "Bearer xxx", ["Host"] = "eggs.test.com"} end
+
+  ngx.encode_base64 = function(x)
+    return "eyJzdWIiOiJzdWIifQ=="
+  end
+
+  ngx.decode_base64 = function(x)
+    return '{"email":"foo@bar.com","subdomain":"spam"}'
+  end
+
+  local headers = {}
+  ngx.req.set_header = function(h, v)
+    headers[h] = v
+  end
+
+  self.handler:access({introspection_endpoint = "x", bearer_only = "yes", realm = "kong", subject_verify_subdomain = "yes"})
+  lu.assertEquals(headers["X-Credential-Sub"], nil)
+end
+
 function TestHandler:test_bearer_only_with_bad_token()
   self.module_resty.openidc.introspect = function(opts)
     return {}, "validation failed"

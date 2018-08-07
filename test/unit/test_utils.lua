@@ -35,6 +35,7 @@ function TestUtils:testOptions()
     ssl_verify = "no",
     token_endpoint_auth_method = "client_secret_post",
     introspection_endpoint_auth_method = "client_secret_basic",
+    subject_verify_subdomain = "yes",
     filters = "pattern1,pattern2,pattern3",
     logout_path = "/logout",
     redirect_after_logout_uri = "/login"
@@ -49,6 +50,7 @@ function TestUtils:testOptions()
   lu.assertEquals(opts.ssl_verify, "no")
   lu.assertEquals(opts.token_endpoint_auth_method, "client_secret_post")
   lu.assertEquals(opts.introspection_endpoint_auth_method, "client_secret_basic")
+  lu.assertEquals(opts.subject_verify_subdomain, "yes")
   lu.assertEquals(opts.redirect_uri_path, "/path/")
   lu.assertEquals(opts.logout_path, "/logout")
   lu.assertEquals(opts.redirect_after_logout_uri, "/login")
