@@ -76,14 +76,16 @@ function M.injectUser(user, subject_verify_subdomain)
   ngx.req.set_header("X-Userinfo", ngx.encode_base64(userinfo))
 
   -- verify subdomain from subject
-  -- against forwarded host headers
+  -- against host header
   if subject_verify_subdomain == "yes" then
     local host = ngx.req.get_headers()['Host']
     local host_subdomain = string.match(host, "[^%.]+")
     local subject = cjson.decode(ngx.decode_base64(user.sub))
     if host_subdomain ~= subject.subdomain then
-      return M.exit(ngx.HTTP_UNAUTHORIZED, "Unauthorized", ngx.HTTP_UNAUTHORIZED)
+      ngx.log(ngx.DEBUG, "subject/host mismatch; subject: " .. subject.subdomain .. ", host: " .. host)
+      return M.exit(ngx.HTTP_UNAUTHORIZED, "invalid token", ngx.HTTP_UNAUTHORIZED)
     end
+    ngx.log(ngx.DEBUG, "subject/host verified; subject: " .. subject.subdomain .. ", host: " .. host)
   end
 
   -- also set Kong defined X-Credential headers
