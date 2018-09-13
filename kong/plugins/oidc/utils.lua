@@ -93,7 +93,7 @@ function M.injectUser(user, subject_verify_subdomain)
   -- https://docs.konghq.com/enterprise/0.33-x/plugins/oauth2-introspection/
   ngx.req.set_header("X-Credential-Scope", user.scope)
   ngx.req.set_header("X-Credential-Client-ID", user.client_id)
-  ngx.req.set_header("X-Credential-Username", user.username)
+  ngx.req.set_header("X-Credential-Username", user.preferred_username)
   ngx.req.set_header("X-Credential-Token-Type", user.token_type)
   ngx.req.set_header("X-Credential-Exp", user.exp)
   ngx.req.set_header("X-Credential-Iat", user.iat)
