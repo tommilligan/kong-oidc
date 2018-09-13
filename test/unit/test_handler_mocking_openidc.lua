@@ -1,6 +1,19 @@
 local lu = require("luaunit")
 TestHandler = require("test.unit.mockable_case"):extend()
 
+function shallowcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
 
 function TestHandler:setUp()
   TestHandler.super:setUp()
@@ -100,7 +113,7 @@ function TestHandler:test_bearer_only_with_good_token()
   local user = {
     active = true,
     client_id = "l238j323ds-23ij4",
-    username = "jdoe",
+    preferred_username = "jdoe",
     scope = "read write dolphin",
     sub = "Z5O3upPC88QrAjx00dis",
     aud = "https://protected.example.net/resource",
@@ -110,7 +123,8 @@ function TestHandler:test_bearer_only_with_good_token()
     extension_field = "twenty-seven"
   }
   self.module_resty.openidc.introspect = function(opts)
-    return user, false
+    -- copy user, otherwise it gets mutates
+    return shallowcopy(user), false
   end
   ngx.req.get_headers = function() return {Authorization = "Bearer xxx"} end
 
@@ -128,7 +142,7 @@ function TestHandler:test_bearer_only_with_good_token()
   lu.assertEquals(headers['X-Userinfo'], "eyJzdWIiOiJzdWIifQ==")
   lu.assertEquals(headers["X-Credential-Scope"], user.scope)
   lu.assertEquals(headers["X-Credential-Client-ID"], user.client_id)
-  lu.assertEquals(headers["X-Credential-Username"], user.username)
+  lu.assertEquals(headers["X-Credential-Username"], user.preferred_username)
   lu.assertEquals(headers["X-Credential-Token-Type"], user.token_type)
   lu.assertEquals(headers["X-Credential-Exp"], user.exp)
   lu.assertEquals(headers["X-Credential-Iat"], user.iat)
@@ -145,9 +159,9 @@ function TestHandler:test_bearer_only_with_good_token_verify_subdomian_ok()
     sub = "eyJlbWFpbCI6ImZvb0BiYXIuY29tIiwic3ViZG9tYWluIjoic3BhbSJ9",
   }
   self.module_resty.openidc.introspect = function(opts)
-    return user, false
+    return shallowcopy(user), false
   end
-  ngx.req.get_headers = function() return {Authorization = "Bearer xxx", ["Host"] = "spam.test.com"} end
+  ngx.req.get_headers = function() return {Authorization = "Bearer xxx", ["Host"] = "spam-crinternal.test.com"} end
 
   ngx.encode_base64 = function(x)
     return "eyJzdWIiOiJzdWIifQ=="
@@ -164,6 +178,7 @@ function TestHandler:test_bearer_only_with_good_token_verify_subdomian_ok()
 
   self.handler:access({introspection_endpoint = "x", bearer_only = "yes", realm = "kong", subject_verify_subdomain  = "yes"})
   lu.assertEquals(headers["X-Credential-Sub"], user.sub)
+  lu.assertEquals(headers["X-Forwarded-Host"], "spam.test.com")
 end
 
 function TestHandler:test_bearer_only_with_good_token_verify_subdomian_nok()
@@ -172,7 +187,7 @@ function TestHandler:test_bearer_only_with_good_token_verify_subdomian_nok()
     sub = "eyJlbWFpbCI6ImZvb0BiYXIuY29tIiwic3ViZG9tYWluIjoic3BhbSJ9",
   }
   self.module_resty.openidc.introspect = function(opts)
-    return user, false
+    return shallowcopy(user), false
   end
   ngx.req.get_headers = function() return {Authorization = "Bearer xxx", ["Host"] = "eggs.test.com"} end
 
@@ -191,6 +206,7 @@ function TestHandler:test_bearer_only_with_good_token_verify_subdomian_nok()
 
   self.handler:access({introspection_endpoint = "x", bearer_only = "yes", realm = "kong", subject_verify_subdomain = "yes"})
   lu.assertEquals(headers["X-Credential-Sub"], nil)
+  lu.assertEquals(headers["X-Forwarded-Host"], nil)
 end
 
 function TestHandler:test_bearer_only_with_bad_token()

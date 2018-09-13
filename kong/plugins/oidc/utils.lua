@@ -79,13 +79,25 @@ function M.injectUser(user, subject_verify_subdomain)
   -- against host header
   if subject_verify_subdomain == "yes" then
     local host = ngx.req.get_headers()['Host']
-    local host_subdomain = string.match(host, "[^%.]+")
+    local req_subdomain = string.match(host, "[^%.]+")
+    local req_domain = string.match(host, "%..+$")
+
+    -- treat -crinternal domains as the normal client domain
+    host_subdomain = string.gsub(req_subdomain, "(.+)-crinternal$", "%1")
+
     local subject = cjson.decode(ngx.decode_base64(user.sub))
+
+    -- actual verification
     if host_subdomain ~= subject.subdomain then
       ngx.log(ngx.DEBUG, "subject/host mismatch; subject: " .. subject.subdomain .. ", host: " .. host)
       return M.exit(ngx.HTTP_UNAUTHORIZED, "invalid token", ngx.HTTP_UNAUTHORIZED)
     end
     ngx.log(ngx.DEBUG, "subject/host verified; subject: " .. subject.subdomain .. ", host: " .. host)
+
+    -- ensure we set the correct source domain
+    -- by replacing real subdomain with validated subject subdomain
+    local forwarded_host = host_subdomain .. req_domain
+    ngx.req.set_header("X-Forwarded-Host", forwarded_host)
   end
 
   -- also set Kong defined X-Credential headers
@@ -93,7 +105,7 @@ function M.injectUser(user, subject_verify_subdomain)
   -- https://docs.konghq.com/enterprise/0.33-x/plugins/oauth2-introspection/
   ngx.req.set_header("X-Credential-Scope", user.scope)
   ngx.req.set_header("X-Credential-Client-ID", user.client_id)
-  ngx.req.set_header("X-Credential-Username", user.username)
+  ngx.req.set_header("X-Credential-Username", user.preferred_username)
   ngx.req.set_header("X-Credential-Token-Type", user.token_type)
   ngx.req.set_header("X-Credential-Exp", user.exp)
   ngx.req.set_header("X-Credential-Iat", user.iat)
