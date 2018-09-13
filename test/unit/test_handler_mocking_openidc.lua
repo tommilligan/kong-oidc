@@ -161,7 +161,7 @@ function TestHandler:test_bearer_only_with_good_token_verify_subdomian_ok()
   self.module_resty.openidc.introspect = function(opts)
     return shallowcopy(user), false
   end
-  ngx.req.get_headers = function() return {Authorization = "Bearer xxx", ["Host"] = "spam.test.com"} end
+  ngx.req.get_headers = function() return {Authorization = "Bearer xxx", ["Host"] = "spam-crinternal.test.com"} end
 
   ngx.encode_base64 = function(x)
     return "eyJzdWIiOiJzdWIifQ=="
